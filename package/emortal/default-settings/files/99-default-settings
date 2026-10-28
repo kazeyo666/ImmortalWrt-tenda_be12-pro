@@ -24,4 +24,9 @@ echo "log-facility=/dev/null" >> "/etc/dnsmasq.conf"
 
 ln -sf "/sbin/ip" "/usr/bin/ip"
 
+if [ "$(uci -q get network.lan.ipaddr)" != "192.168.0.1" ]; then
+	uci -q set network.lan.ipaddr="192.168.0.1"
+	uci -q commit network
+fi
+
 exit 0
