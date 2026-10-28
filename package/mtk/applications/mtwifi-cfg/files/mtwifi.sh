@@ -26,17 +26,17 @@ detect_mtwifi() {
 				if [ "$band" = "2g" ]; then
 					htmode="EHT20"
 					htbsscoex="0"
-					ssid="ImmortalWrt-2.4G"
+					ssid="xiaxia"
 					channel="auto"
 				elif [ "$band" = "5g" ]; then
 					htmode="EHT160"
 					htbsscoex="0"
-					ssid="ImmortalWrt-5G"
+					ssid="xiaxia-5G"
 					channel="36"
 				elif [ "$band" = "6g" ]; then
 					htmode="EHT160"
 					htbsscoex="0"
-					ssid="ImmortalWrt-6G"
+					ssid="xiaxia-6G"
 				fi
 
 				uci -q batch <<-EOF
@@ -48,7 +48,7 @@ detect_mtwifi() {
 					set wireless.${dev}.channel=${channel}
 					set wireless.${dev}.txpower=100
 					set wireless.${dev}.htmode=${htmode}
-					set wireless.${dev}.country=US
+					set wireless.${dev}.country=CN
 					set wireless.${dev}.mu_beamformer=1
 					set wireless.${dev}.noscan=${htbsscoex}
 					set wireless.${dev}.serialize=1
@@ -58,7 +58,8 @@ detect_mtwifi() {
 					set wireless.default_${dev}.network=lan
 					set wireless.default_${dev}.mode=ap
 					set wireless.default_${dev}.ssid=${ssid}
-					set wireless.default_${dev}.encryption=none
+					set wireless.default_${dev}.encryption=psk2
+					set wireless.default_${dev}.key=123456zxc
 EOF
 				uci -q commit wireless
 			}

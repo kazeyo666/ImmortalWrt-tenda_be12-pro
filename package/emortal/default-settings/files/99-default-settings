@@ -29,4 +29,56 @@ if [ "$(uci -q get network.lan.ipaddr)" != "192.168.0.1" ]; then
 	uci -q commit network
 fi
 
+# WAN 口 PPPoE 拨号设置
+uci -q batch <<-EOF
+	set network.wan.proto='pppoe'
+	set network.wan.username='028013203237'
+	set network.wan.password='260019'
+	set network.wan.ipv6='auto'
+	commit network
+EOF
+
+# 端口转发
+add_port_forward() {
+	local name="$1"
+	local src_dport="$2"
+	local dest_ip="$3"
+	local dest_port="$4"
+	local proto="${5:-tcp udp}"
+
+	if ! uci show firewall 2>/dev/null | grep -q "src_dport='${src_dport}'"; then
+		local sec
+		sec=$(uci add firewall redirect)
+		uci set firewall.${sec}.name="${name}"
+		uci set firewall.${sec}.src='wan'
+		uci set firewall.${sec}.src_dport="${src_dport}"
+		uci set firewall.${sec}.dest='lan'
+		uci set firewall.${sec}.dest_ip="${dest_ip}"
+		uci set firewall.${sec}.dest_port="${dest_port}"
+		uci set firewall.${sec}.proto="${proto}"
+		uci set firewall.${sec}.target='DNAT'
+	fi
+}
+
+add_port_forward "Port_6022" "6022" "192.168.0.190" "22" "tcp"
+add_port_forward "Port_6000" "6000" "192.168.0.190" "6000" "tcp udp"
+add_port_forward "Port_7000" "7000" "192.168.0.190" "7000" "tcp udp"
+uci -q commit firewall
+
+# 默认无线配置兜底
+if uci -q get wireless >/dev/null 2>&1; then
+	for iface in $(uci show wireless 2>/dev/null | grep '=wifi-iface' | cut -d. -f2 | cut -d= -f1); do
+		dev=$(uci -q get wireless.${iface}.device)
+		band=$(uci -q get wireless.${dev}.band)
+		if [ "$band" = "5g" ] || echo "$dev" | grep -q '5g'; then
+			uci -q set wireless.${iface}.ssid="xiaxia-5G"
+		else
+			uci -q set wireless.${iface}.ssid="xiaxia"
+		fi
+		uci -q set wireless.${iface}.encryption="psk2"
+		uci -q set wireless.${iface}.key="123456zxc"
+	done
+	uci -q commit wireless
+fi
+
 exit 0

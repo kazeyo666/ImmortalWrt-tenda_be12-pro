@@ -127,11 +127,12 @@ jobs:
           echo "✅ Successfully loaded $CONFIG_FILE"
 
           set_config "CONFIG_CCACHE" "y"
+          set_config "CONFIG_PACKAGE_luci-app-openclash" "y"
 
           make defconfig
 
           echo "📄 Key config:"
-          grep -E '^(CONFIG_TARGET_|CONFIG_CCACHE=|CONFIG_PACKAGE_luci-app-wol=|CONFIG_PACKAGE_luci-proto-wireguard=)' .config || true
+          grep -E '^(CONFIG_TARGET_|CONFIG_CCACHE=|CONFIG_PACKAGE_luci-app-wol=|CONFIG_PACKAGE_luci-proto-wireguard=|CONFIG_PACKAGE_luci-app-openclash=)' .config || true
 
       - name: Download Sources
         run: |
