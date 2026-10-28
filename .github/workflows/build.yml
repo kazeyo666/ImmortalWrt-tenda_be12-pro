@@ -132,7 +132,7 @@ jobs:
           make defconfig
 
           echo "📄 Key config:"
-          grep -E '^(CONFIG_TARGET_|CONFIG_CCACHE=|CONFIG_PACKAGE_luci-app-ttyd=|CONFIG_PACKAGE_ttyd=)' .config || true
+          grep -E '^(CONFIG_TARGET_|CONFIG_CCACHE=|CONFIG_PACKAGE_luci-app-wol=|CONFIG_PACKAGE_luci-proto-wireguard=)' .config || true
 
       - name: Download Sources
         run: |
@@ -223,10 +223,4 @@ jobs:
               - `luci-proto-wireguard`: WireGuard 协议支持
               - `luci-app-wol`: 网络唤醒 (WoL) 功能
               - `luci-i18n-wol-zh-cn`: WoL 中文语言包
-              - `ddns-scripts-cloudflare`: Cloudflare DDNS 脚本
-              - `luci-app-ddns`: 动态 DNS 配置界面
-              - `luci-i18n-ddns-zh-cn`: DDNS 中文语言包
-              - `bind-host`: BIND DNS 服务器宿主支持
-              - `luci-app-store`: iStore 软件中心
               - `kmod-tun` / `kmod-iptunnel` / `kmod-wireguard`: VPN 隧道基础模块
-              - `luci-app-ttyd` / `ttyd`: 网页终端
