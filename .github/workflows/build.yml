@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, linux, arm64]
     strategy:
       fail-fast: false
       matrix:
@@ -45,21 +45,21 @@ jobs:
         uses: actions/cache@v6.1.0
         with:
           path: dl
-          key: ${{ runner.os }}-immortalwrt-dl-${{ matrix.config_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}
+          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-${{ matrix.config_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}
           restore-keys: |
-            ${{ runner.os }}-immortalwrt-dl-${{ matrix.config_name }}-
-            ${{ runner.os }}-immortalwrt-dl-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-${{ matrix.config_name }}-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-
 
       - name: Restore Compiler Cache
         id: ccache-restore
         uses: actions/cache/restore@v6.1.0
         with:
           path: .ccache
-          key: ${{ runner.os }}-immortalwrt-ccache-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}-${{ github.sha }}
+          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-immortalwrt-ccache-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}-
-            ${{ runner.os }}-immortalwrt-ccache-${{ matrix.config_name }}-
-            ${{ runner.os }}-immortalwrt-ccache-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-${{ matrix.config_name }}-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-
 
       - name: Restore Host/Toolchain Cache
         id: host-toolchain-cache
@@ -72,16 +72,15 @@ jobs:
             build_dir/host
             build_dir/hostpkg
             build_dir/toolchain-*
-          key: ${{ runner.os }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles('tools/**', 'toolchain/**', 'include/**') }}-${{ github.sha }}
+          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles('tools/**', 'toolchain/**', 'include/**') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles('tools/**', 'toolchain/**', 'include/**') }}-
-            ${{ runner.os }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-
-            ${{ runner.os }}-immortalwrt-host-toolchain-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles('tools/**', 'toolchain/**', 'include/**') }}-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-
+            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-
 
       - name: Initialize Build Environment
         run: |
-          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          sudo timedatectl set-timezone "Asia/Shanghai"
+          sudo timedatectl set-timezone "Asia/Shanghai" || true
 
       - name: Prepare Compiler Cache
         run: |
