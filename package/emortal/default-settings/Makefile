@@ -32,8 +32,6 @@ endef
 define Package/default-settings/install
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_BIN) ./files/99-default-settings $(1)/etc/uci-defaults/
-	$(INSTALL_DIR) $(1)/usr/share/passwall2
-	$(INSTALL_DATA) ./files/0_default_config $(1)/usr/share/passwall2/0_default_config
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/0_default_config $(1)/etc/config/passwall2
 endef

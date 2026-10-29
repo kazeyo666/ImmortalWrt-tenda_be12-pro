@@ -15,6 +15,14 @@ on:
           - full
           - mini
           - both
+      clean_build:
+        description: Discard build artifacts and rebuild from scratch
+        type: boolean
+        default: false
+      update_feeds:
+        description: Update feeds to latest revisions
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,7 +38,6 @@ jobs:
 
     env:
       DEBIAN_FRONTEND: noninteractive
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPRESS: "true"
       CCACHE_MAXSIZE: "3000M"
       CCACHE_BASEDIR: ${{ github.workspace }}
@@ -40,68 +47,68 @@ jobs:
         uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0
+          clean: ${{ inputs.clean_build == true }}
 
-      - name: Restore Download Cache
-        uses: actions/cache@v6.1.0
-        with:
-          path: dl
-          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-${{ matrix.config_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-${{ matrix.config_name }}-
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-
-
-      - name: Restore Compiler Cache
-        id: ccache-restore
-        uses: actions/cache/restore@v6.1.0
-        with:
-          path: .ccache
-          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}-
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-${{ matrix.config_name }}-
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-ccache-
-
-      - name: Restore Host/Toolchain Cache
-        id: host-toolchain-cache
-        uses: actions/cache/restore@v6.1.0
-        with:
-          path: |
-            staging_dir/host
-            staging_dir/hostpkg
-            staging_dir/toolchain-*
-            build_dir/host
-            build_dir/hostpkg
-            build_dir/toolchain-*
-          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles('tools/**', 'toolchain/**', 'include/**') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-${{ github.ref_name }}-${{ hashFiles('tools/**', 'toolchain/**', 'include/**') }}-
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-${{ matrix.config_name }}-
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-host-toolchain-
+      - name: Check Incremental Build Compatibility
+        run: |
+          set -euo pipefail
+          state="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/build-state"
+          mkdir -p "$(dirname "$state")"
+          fingerprint=$(printf '%s\n' "${{ matrix.config_file }}" "$(git rev-parse HEAD:tools HEAD:toolchain HEAD:include HEAD:rules.mk HEAD:target/linux/mediatek)" | sha256sum | cut -d' ' -f1)
+          if [ -f "$state" ] && [ "$(cat "$state")" = "$fingerprint" ]; then
+            echo "Compatible build tree: reusing package outputs and stamps"
+          else
+            echo "Build profile or toolchain changed: cleaning build outputs"
+            make dirclean
+          fi
+          printf '%s\n' "$fingerprint" > "$state"
 
       - name: Initialize Build Environment
         run: |
           sudo timedatectl set-timezone "Asia/Shanghai" || true
 
-      - name: Prepare Compiler Cache
+      - name: Prepare Persistent Caches
         run: |
           set -euo pipefail
+
+          export CCACHE_DIR="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/ccache"
+          echo "CCACHE_DIR=${CCACHE_DIR}" >> "$GITHUB_ENV"
+          export DOWNLOAD_DIR="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/dl"
+          echo "DOWNLOAD_DIR=${DOWNLOAD_DIR}" >> "$GITHUB_ENV"
 
           if ! command -v ccache >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ccache
           fi
 
-          mkdir -p "${CCACHE_DIR}" dl
-          ccache -M "${CCACHE_MAXSIZE}"
-          ccache --zero-stats || true
-          ccache --show-config | sed -n '1,20p'
+          mkdir -p "${CCACHE_DIR}" "${DOWNLOAD_DIR}"
+          ccache_bin="$GITHUB_WORKSPACE/staging_dir/host/bin/ccache"
+          [ -x "$ccache_bin" ] || ccache_bin="$(command -v ccache)"
+          "$ccache_bin" -M "${CCACHE_MAXSIZE}"
+          "$ccache_bin" --zero-stats
+          "$ccache_bin" --show-config | sed -n '1,20p'
 
       - name: Update and Install Feeds
         run: |
-          ./scripts/feeds update -a
+          set -euo pipefail
+          feed_state="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/feeds.conf.default"
+          if [ "${{ inputs.update_feeds }}" = "true" ] || [ ! -d feeds/packages/.git ] || ! cmp -s feeds.conf.default "$feed_state"; then
+            if [ -d feeds/packages/.git ]; then
+              git -C feeds/packages restore -- lang/golang/golang/Makefile
+            fi
+            if [ -d feeds/passwall2/.git ]; then
+              git -C feeds/passwall2 restore -- luci-app-passwall2/root/usr/share/passwall2/0_default_config
+            fi
+            ./scripts/feeds update -a
+            cp feeds.conf.default "$feed_state"
+          else
+            echo "Reusing existing feed revisions"
+          fi
+          cmp -s config/golang-host.mk feeds/packages/lang/golang/golang/Makefile || cp -f config/golang-host.mk feeds/packages/lang/golang/golang/Makefile
+          ./scripts/feeds update -i
           ./scripts/feeds install -a
           if [ -d "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2" ]; then
-            cp -f "package/emortal/default-settings/files/0_default_config" "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2/0_default_config"
+            cmp -s "package/emortal/default-settings/files/0_default_config" "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2/0_default_config" || cp -f "package/emortal/default-settings/files/0_default_config" "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2/0_default_config"
           fi
 
       - name: Load Configuration (${{ matrix.config_name }})
@@ -129,12 +136,20 @@ jobs:
           cp -f "$CONFIG_FILE" .config
           echo "✅ Successfully loaded $CONFIG_FILE"
 
+          set_config "CONFIG_DEVEL" "y"
           set_config "CONFIG_CCACHE" "y"
+          set_config "CONFIG_CCACHE_DIR" "\"${CCACHE_DIR}\""
+          set_config "CONFIG_DOWNLOAD_FOLDER" "\"${DOWNLOAD_DIR}\""
           if [ "${{ matrix.config_file }}" = "full" ]; then
             set_config "CONFIG_PACKAGE_luci-app-passwall2" "y"
           fi
 
           make defconfig
+
+          grep -qx 'CONFIG_DEVEL=y' .config
+          grep -qx 'CONFIG_CCACHE=y' .config
+          grep -Fxq "CONFIG_CCACHE_DIR=\"${CCACHE_DIR}\"" .config
+          grep -Fxq "CONFIG_DOWNLOAD_FOLDER=\"${DOWNLOAD_DIR}\"" .config
 
           echo "📄 Key config:"
           grep -E '^(CONFIG_TARGET_|CONFIG_CCACHE=|CONFIG_PACKAGE_luci-app-wol=|CONFIG_PACKAGE_luci-proto-wireguard=|CONFIG_PACKAGE_luci-app-passwall2=)' .config || true
@@ -142,40 +157,17 @@ jobs:
       - name: Download Sources
         run: |
           make download -j"$(nproc)"
-          find dl -type f -size -1024c -delete
 
       - name: Compile Firmware
         run: |
           set -euo pipefail
-
-          ccache --show-stats || true
 
           if ! make -j"$(nproc)"; then
             echo "::warning::Parallel build failed, retrying with -j1 V=s"
             make -j1 V=s
           fi
 
-          ccache --show-stats || true
-
-      - name: Save Compiler Cache
-        if: always() && steps.ccache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6.1.0
-        with:
-          path: .ccache
-          key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
-
-      - name: Save Host/Toolchain Cache
-        if: success() && steps.host-toolchain-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6.1.0
-        with:
-          path: |
-            staging_dir/host
-            staging_dir/hostpkg
-            staging_dir/toolchain-*
-            build_dir/host
-            build_dir/hostpkg
-            build_dir/toolchain-*
-          key: ${{ steps.host-toolchain-cache.outputs.cache-primary-key }}
+          staging_dir/host/bin/ccache --show-stats
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7.0.1
