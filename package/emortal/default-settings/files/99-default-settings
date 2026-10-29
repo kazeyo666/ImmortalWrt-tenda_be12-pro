@@ -75,7 +75,7 @@ if uci -q get wireless >/dev/null 2>&1; then
 		else
 			uci -q set wireless.${iface}.ssid="xiaxia"
 		fi
-		uci -q set wireless.${iface}.encryption="psk2"
+		uci -q set wireless.${iface}.encryption="sae-mixed"
 		uci -q set wireless.${iface}.key="123456zxc"
 	done
 	uci -q commit wireless
