@@ -30,7 +30,6 @@ jobs:
 
     env:
       DEBIAN_FRONTEND: noninteractive
-      CCACHE_DIR: ${{ runner.tool_cache }}/immortalwrt-tenda-be12-pro/ccache
       CCACHE_COMPRESS: "true"
       CCACHE_MAXSIZE: "3000M"
       CCACHE_BASEDIR: ${{ github.workspace }}
@@ -74,6 +73,9 @@ jobs:
       - name: Prepare Compiler Cache
         run: |
           set -euo pipefail
+
+          export CCACHE_DIR="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/ccache"
+          echo "CCACHE_DIR=${CCACHE_DIR}" >> "$GITHUB_ENV"
 
           if ! command -v ccache >/dev/null 2>&1; then
             sudo apt-get update
