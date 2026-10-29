@@ -92,6 +92,7 @@ jobs:
       - name: Update and Install Feeds
         run: |
           ./scripts/feeds update -a
+          cp -f config/golang-host.mk feeds/packages/lang/golang/golang/Makefile
           ./scripts/feeds install -a
           if [ -d "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2" ]; then
             cp -f "package/emortal/default-settings/files/0_default_config" "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2/0_default_config"
