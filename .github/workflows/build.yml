@@ -100,6 +100,9 @@ jobs:
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+          if [ -d "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2" ]; then
+            cp -f "package/emortal/default-settings/files/0_default_config" "feeds/passwall2/luci-app-passwall2/root/usr/share/passwall2/0_default_config"
+          fi
 
       - name: Load Configuration (${{ matrix.config_name }})
         run: |
