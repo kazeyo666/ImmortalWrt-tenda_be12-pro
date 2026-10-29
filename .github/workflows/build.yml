@@ -40,15 +40,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore Download Cache
-        uses: actions/cache@v6.1.0
-        with:
-          path: dl
-          key: ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-${{ matrix.config_name }}-${{ hashFiles(format('defconfig/{0}.config', matrix.config_file)) }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-${{ matrix.config_name }}-
-            ${{ runner.os }}-${{ runner.arch }}-immortalwrt-dl-
-
       - name: Restore Host/Toolchain Cache
         id: host-toolchain-cache
         uses: actions/cache/restore@v6.1.0
@@ -70,19 +61,21 @@ jobs:
         run: |
           sudo timedatectl set-timezone "Asia/Shanghai" || true
 
-      - name: Prepare Compiler Cache
+      - name: Prepare Persistent Caches
         run: |
           set -euo pipefail
 
           export CCACHE_DIR="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/ccache"
           echo "CCACHE_DIR=${CCACHE_DIR}" >> "$GITHUB_ENV"
+          export DOWNLOAD_DIR="${RUNNER_TOOL_CACHE}/immortalwrt-tenda-be12-pro/dl"
+          echo "DOWNLOAD_DIR=${DOWNLOAD_DIR}" >> "$GITHUB_ENV"
 
           if ! command -v ccache >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ccache
           fi
 
-          mkdir -p "${CCACHE_DIR}" dl
+          mkdir -p "${CCACHE_DIR}" "${DOWNLOAD_DIR}"
           ccache_bin="$GITHUB_WORKSPACE/staging_dir/host/bin/ccache"
           [ -x "$ccache_bin" ] || ccache_bin="$(command -v ccache)"
           "$ccache_bin" -M "${CCACHE_MAXSIZE}"
@@ -126,6 +119,7 @@ jobs:
           set_config "CONFIG_DEVEL" "y"
           set_config "CONFIG_CCACHE" "y"
           set_config "CONFIG_CCACHE_DIR" "\"${CCACHE_DIR}\""
+          set_config "CONFIG_DOWNLOAD_FOLDER" "\"${DOWNLOAD_DIR}\""
           if [ "${{ matrix.config_file }}" = "full" ]; then
             set_config "CONFIG_PACKAGE_luci-app-passwall2" "y"
           fi
@@ -135,6 +129,7 @@ jobs:
           grep -qx 'CONFIG_DEVEL=y' .config
           grep -qx 'CONFIG_CCACHE=y' .config
           grep -Fxq "CONFIG_CCACHE_DIR=\"${CCACHE_DIR}\"" .config
+          grep -Fxq "CONFIG_DOWNLOAD_FOLDER=\"${DOWNLOAD_DIR}\"" .config
 
           echo "📄 Key config:"
           grep -E '^(CONFIG_TARGET_|CONFIG_CCACHE=|CONFIG_PACKAGE_luci-app-wol=|CONFIG_PACKAGE_luci-proto-wireguard=|CONFIG_PACKAGE_luci-app-passwall2=)' .config || true
@@ -142,7 +137,6 @@ jobs:
       - name: Download Sources
         run: |
           make download -j"$(nproc)"
-          find dl -type f -size -1024c -delete
 
       - name: Compile Firmware
         run: |
