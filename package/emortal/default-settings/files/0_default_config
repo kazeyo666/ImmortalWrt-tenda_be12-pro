@@ -73,18 +73,50 @@ config nodes 'rulenode'
 	option type 'Xray'
 	option protocol '_shunt'
 	option PrivateIP '_direct'
-	option default_node 'examplenode'
+	option default_node '_direct'
 	option domainStrategy 'IPOnDemand'
 	option domainMatcher 'hybrid'
 	option write_ipset_direct '1'
 	option enable_geoview_ip '1'
 	option shunt_group 'CN'
+	option LAN_Direct '_direct'
 	option DirectFront '_direct'
-	option ProxyFront '_default'
-	option Ai_Rules '_default'
+	option Ai_Rules 'examplenode'
+	option Media_Rules 'examplenode'
+	option VPS_Rules 'examplenode'
+	option ProxyFront 'examplenode'
 	option DirectGame '_direct'
-	option ProxyGame '_default'
+	option ProxyGame 'examplenode'
 	option CN '_direct'
+
+config shunt_rules 'LAN_Direct'
+	option remarks 'LAN_Direct'
+	option network 'tcp,udp'
+	option group 'CN'
+	option domain_list 'domain:lan
+domain:local
+domain:localhost
+domain:home.arpa
+domain:internal
+domain:intranet
+domain:router
+domain:openwrt
+domain:tendawifi.com
+domain:miwifi.com
+domain:asuscomm.com'
+	option ip_list 'geoip:private
+0.0.0.0/8
+10.0.0.0/8
+100.64.0.0/10
+127.0.0.0/8
+169.254.0.0/16
+172.16.0.0/12
+192.168.0.0/16
+224.0.0.0/4
+240.0.0.0/4
+::1/128
+fc00::/7
+fe80::/10'
 
 config shunt_rules 'DirectFront'
 	option remarks 'DirectFront'
@@ -205,6 +237,118 @@ domain:hf.co
 domain:hf.space
 domain:manus.im
 domain:manuscdn.com'
+
+config shunt_rules 'Media_Rules'
+	option remarks 'Media_Rules'
+	option network 'tcp,udp'
+	option group 'CN'
+	option domain_list 'geosite:youtube
+domain:youtube.com
+domain:youtu.be
+domain:ytimg.com
+domain:googlevideo.com
+domain:youtubei.googleapis.com
+domain:yt.be
+domain:ggpht.com
+domain:gvt1.com
+geosite:netflix
+domain:netflix.com
+domain:netflix.net
+domain:nflximg.net
+domain:nflxvideo.net
+domain:nflxso.net
+domain:nflxext.com
+geosite:disney
+domain:disneyplus.com
+domain:disney-plus.net
+domain:dssott.com
+domain:disneystreaming.com
+domain:bamgrid.com
+domain:max.com
+domain:hbomax.com
+domain:hbo.com
+domain:hbonow.com
+domain:hbomaxcdn.com
+domain:primevideo.com
+domain:pv-cdn.net
+domain:aiv-cdn.net
+geosite:twitch
+domain:twitch.tv
+domain:ttvnw.net
+domain:jtvnw.net
+geosite:spotify
+domain:spotify.com
+domain:scdn.co
+domain:spoti.fi
+domain:tiktok.com
+domain:tiktokcdn.com
+domain:tiktokv.com
+domain:byteoversea.com
+domain:ibytedtos.com
+domain:hulu.com
+domain:hulustream.com
+domain:huluim.com
+domain:dmm.com
+domain:dmm.co.jp
+domain:abema.tv
+domain:ameba.jp
+domain:tver.jp
+domain:gamer.com.tw
+domain:bahamut.com.tw'
+
+config shunt_rules 'VPS_Rules'
+	option remarks 'VPS_Rules'
+	option network 'tcp,udp'
+	option group 'CN'
+	option domain_list 'domain:nodeseek.com
+domain:ns.2nd.me
+domain:isvoro.com
+domain:akile.ai
+domain:akile.io
+domain:oracle.com
+domain:oraclecloud.com
+domain:oraclecloud.net
+domain:linode.com
+domain:digitalocean.com
+domain:vultr.com
+domain:hetzner.com
+domain:hetzner.de
+domain:hetzner.cloud
+domain:ovh.com
+domain:ovhcloud.com
+domain:ovh.net
+domain:kimsufi.com
+domain:soyoustart.com
+domain:bandwagonhost.com
+domain:bwh88.net
+domain:bwh89.net
+domain:bwh81.net
+domain:justmysocks.net
+domain:justmysocks1.net
+domain:justmysocks2.net
+domain:justmysocks3.net
+domain:racknerd.com
+domain:cloudcone.com
+domain:hostinger.com
+domain:netcup.de
+domain:netcup.eu
+domain:buyvm.net
+domain:frantech.ca
+domain:contabo.com
+domain:dmit.io
+domain:misaka.io
+domain:kurun.com
+domain:hosthatch.com
+domain:v.ps
+domain:spartanhost.org
+domain:spartanhost.net
+domain:lowendtalk.com
+domain:lowendbox.com
+domain:scaleway.com
+domain:hostdare.com
+domain:crunchbits.com
+domain:greencloudvps.com
+domain:servarica.com'
 
 config shunt_rules 'DirectGame'
 	option remarks 'DirectGame'

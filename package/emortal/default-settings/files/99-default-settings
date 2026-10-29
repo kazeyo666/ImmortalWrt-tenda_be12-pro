@@ -81,13 +81,21 @@ if uci -q get wireless >/dev/null 2>&1; then
 	uci -q commit wireless
 fi
 
-# PassWall2 确保 Ai_Rules 分流规则走默认代理
+# PassWall2 确保分流规则与兜底直连生效
 if [ -f "/etc/config/passwall2" ]; then
 	if uci -q get passwall2.rulenode >/dev/null 2>&1; then
-		if [ "$(uci -q get passwall2.rulenode.Ai_Rules)" != "_default" ]; then
-			uci -q set passwall2.rulenode.Ai_Rules='_default'
-			uci -q commit passwall2
-		fi
+		uci -q batch <<-EOF
+			set passwall2.rulenode.default_node='_direct'
+			set passwall2.rulenode.LAN_Direct='_direct'
+			set passwall2.rulenode.PrivateIP='_direct'
+			set passwall2.rulenode.CN='_direct'
+			set passwall2.rulenode.Ai_Rules='examplenode'
+			set passwall2.rulenode.Media_Rules='examplenode'
+			set passwall2.rulenode.VPS_Rules='examplenode'
+			set passwall2.rulenode.ProxyFront='examplenode'
+			set passwall2.rulenode.ProxyGame='examplenode'
+			commit passwall2
+		EOF
 	fi
 fi
 
